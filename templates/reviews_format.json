@@ -1,0 +1,19 @@
+{
+  "cols": {
+    "id": "id",
+    "proposal_id": "proposal_id",
+    "Assessor": "assessor",
+    "Impact / Alignment Note": "impact_alignment_note",
+    "Impact / Alignment Rating": "impact_alignment_rating_given",
+    "Feasibility Note": "feasibility_note",
+    "Feasibility Rating": "feasibility_rating_given",
+    "Auditability Note": "auditability_note",
+    "Auditability Rating": "auditability_rating_given",
+    "Result": "ranking"
+  },
+  "rating_cols": [
+    "Impact / Alignment Rating",
+    "Feasibility Rating",
+    "Auditability Rating"
+  ]
+}

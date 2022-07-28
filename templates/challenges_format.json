@@ -1,0 +1,12 @@
+{
+  "export_cols": [
+    "id",
+    "title",
+    "challenge_type",
+    "challenge_url",
+    "description",
+    "fund_id",
+    "rewards_total",
+    "proposers_rewards"
+  ]
+}
