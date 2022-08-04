@@ -32,23 +32,33 @@ def import_fund(
         "templates/tags.json",
         help="Mapping for proposals"
     ),
-    reviews_map: str = typer.Option(
-        "templates/reviews_format.json",
-        help="Mapping for assessments transformation."
+    funds_format: str = typer.Option(
+        "templates/funds_format.json",
+        help="Mapping for funds transformation."
     ),
-    challenges_map: str = typer.Option(
+    challenges_format: str = typer.Option(
         "templates/challenges_format.json",
         help="Mapping for challenges export."
+    ),
+    proposals_format: str = typer.Option(
+        "templates/proposals_format.json",
+        help="Mapping for proposals"
+    ),
+    reviews_format: str = typer.Option(
+        "templates/reviews_format.json",
+        help="Mapping for assessments transformation."
     ),
     output_dir: str = typer.Option("meta/fund9", help="Output dir for results"),
 ):
     # Load and prepare
     mappings = json.load(open(f"{proposals_map}"))
-    reviews_map = json.load(open(f"{reviews_map}"))
-    challenges_map = json.load(open(f"{challenges_map}"))
+    funds_format = json.load(open(f"{funds_format}"))
+    challenges_format = json.load(open(f"{challenges_format}"))
+    proposals_format = json.load(open(f"{proposals_format}"))
+    reviews_format = json.load(open(f"{reviews_format}"))
     assessments = transform_assessments(
         pd.read_csv(assessments),
-        reviews_map
+        reviews_format
     )
     withdrawn_proposals = pd.read_csv(withdrawn)
 
@@ -64,19 +74,28 @@ def import_fund(
         chain_vote_type,
         assessments
     )
-    reviews = get_reviews(assessments, reviews_map)
+    reviews = get_reviews(assessments, reviews_format)
     scores = get_scores(assessments)
     excluded = transform_excluded(withdrawn_proposals)
 
     # Export relevant data
     print(f"[yellow]Saving data...[/yellow]")
-    save_json(f"{output_dir}/funds.json", e_fund)
+    save_json(
+        f"{output_dir}/funds.json",
+        export_format(e_fund, funds_format)
+    )
     save_json(
         f"{output_dir}/challenges.json",
-        export_format(challenges, challenges_map)
+        export_format(challenges, challenges_format)
     )
-    save_json(f"{output_dir}/proposals.json", proposals)
-    save_json(f"{output_dir}/reviews.json", reviews)
+    save_json(
+        f"{output_dir}/proposals.json",
+        export_format(proposals, proposals_format)
+    )
+    save_json(
+        f"{output_dir}/reviews.json",
+        export_format(reviews, reviews_format)
+    )
     scores.to_csv(f"{output_dir}/scores.csv", index=False)
     save_json(f"{output_dir}/excluded_proposals.json", excluded)
     print(f"[green bold]All data saved in {output_dir}.[/green bold]")
@@ -109,12 +128,12 @@ def get_challenges(fund_id, fund_group_id, api_token):
                     "title": title,
                     "challenge_type": challenge_type,
                     # canonical URL from the API query points to brief instead
-                    # of to proposals
+                    # of proposals
                     "challenge_url": f"https://cardano.ideascale.com/c/campaigns/{res['id']}/",
                     "description": strip_tags(res["description"]),
                     "fund_id": fund_id,
-                    "rewards_total": str(rewards),
-    		        "proposers_rewards": str(rewards),
+                    "rewards_total": rewards,
+    		        "proposers_rewards": rewards,
                     "internal_id": res['id']
                 }
                 challenges.append(challenge)
@@ -288,10 +307,20 @@ def find_challenge(id, challenges):
     print(f"Error, challenge {id} not found")
     return {}
 
+def cast_field(value, dtype):
+    if (dtype == 'int'):
+        return int(value)
+    elif (dtype == 'float'):
+        return float(value)
+    elif (dtype == 'bool'):
+        return value.lower() == "true"
+    else:
+        return str(value)
+
 def export_format(elements, ex_format):
     # Map list of elements filtering only valid fields
     return [
-        dict((k, el[k]) for k in ex_format['export_cols'] if k in el)
+        dict((k, cast_field(el[k], ex_format['export_cols'][k])) for k in ex_format['export_cols'].keys() if k in el)
         for el in elements
     ]
 

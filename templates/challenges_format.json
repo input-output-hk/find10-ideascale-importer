@@ -1,12 +1,12 @@
 {
-  "export_cols": [
-    "id",
-    "title",
-    "challenge_type",
-    "challenge_url",
-    "description",
-    "fund_id",
-    "rewards_total",
-    "proposers_rewards"
-  ]
+  "export_cols": {
+    "id": "string",
+    "title": "string",
+    "challenge_type": "string",
+    "challenge_url": "string",
+    "description": "string",
+    "fund_id": "string",
+    "rewards_total": "string",
+    "proposers_rewards": "string"
+  }
 }

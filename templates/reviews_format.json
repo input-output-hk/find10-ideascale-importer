@@ -11,6 +11,18 @@
     "Auditability Rating": "auditability_rating_given",
     "Result": "ranking"
   },
+  "export_cols": {
+    "id": "string",
+    "proposal_id": "string",
+    "assessor": "string",
+    "impact_alignment_note": "string",
+    "impact_alignment_rating_given": "int",
+    "feasibility_note": "string",
+    "feasibility_rating_given": "int",
+    "auditability_note": "string",
+    "auditability_rating_given": "int",
+    "ranking": "string"
+  },
   "rating_cols": [
     "Impact / Alignment Rating",
     "Feasibility Rating",
