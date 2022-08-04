@@ -13,6 +13,7 @@ from rich import print
 app = typer.Typer()
 
 IDEASCALE_API_URL="https://cardano.ideascale.com/a/rest"
+MAX_PAGES_TO_QUERY=50
 
 @app.command()
 def import_fund(
@@ -157,7 +158,7 @@ def get_proposals(
     relevant_keys = extract_relevant_keys(mappings)
     internal_id = 0
     for stage in stage_ids:
-        for page in range(1):
+        for page in range(MAX_PAGES_TO_QUERY):
             url = f"{IDEASCALE_API_URL}/v1/stages/{stage}/ideas/{page}/{page_size}"
             response = ideascale_get(url, api_token)
             for idx, idea in enumerate(response):
