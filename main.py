@@ -12,8 +12,8 @@ from rich import print
 
 app = typer.Typer()
 
-IDEASCALE_API_URL="https://cardano.ideascale.com/a/rest"
-MAX_PAGES_TO_QUERY=50
+IDEASCALE_API_URL = "https://cardano.ideascale.com/a/rest"
+MAX_PAGES_TO_QUERY = 1
 
 @app.command()
 def import_fund(
@@ -23,6 +23,10 @@ def import_fund(
     chain_vote_type: str = typer.Option("private", help="Chain vote type"),
     threshold: int = typer.Option(450, help="Voting threshold"),
     fund_goal: str = typer.Option("Lorem ipsum", help="Fund goal"),
+    merge_multiple_authors: bool = typer.Option(
+        False,
+        help="When active includes and merge contributors name in author field"
+    ),
     stages: List[int] = typer.Option(
         [],
         help="List of stages ids that will be pulled from Ideascale"
@@ -73,7 +77,8 @@ def import_fund(
         api_token,
         mappings,
         chain_vote_type,
-        assessments
+        assessments,
+        merge_multiple_authors
     )
     reviews = get_reviews(assessments, reviews_format)
     scores = get_scores(assessments)
@@ -150,7 +155,8 @@ def get_proposals(
     api_token,
     mappings,
     chain_vote_type,
-    assessments
+    assessments,
+    merge_multiple_authors
 ):
     print(f"[yellow]Requesting proposals...[/yellow]")
     page_size = 50
@@ -164,6 +170,7 @@ def get_proposals(
             for idx, idea in enumerate(response):
                 challenge = find_challenge(idea['campaignId'], challenges)
                 temp_idea = extract_custom_fields(idea, relevant_keys)
+                proposers_name = extract_proposers(idea, merge_multiple_authors)
                 parsed_idea = {
                     "category_name": f"Fund {fund_id}",
                     "chain_vote_options": "blank,yes,no",
@@ -177,7 +184,7 @@ def get_proposals(
                     "proposal_title": strip_tags(idea["title"]),
                     "proposal_url": idea["url"],
                     "proposer_email": idea["authorInfo"]["email"],
-                    "proposer_name": idea["authorInfo"]["name"]
+                    "proposer_name": proposers_name
                 }
                 for k in mappings:
                     extracted = extract_mapping(mappings[k], temp_idea)
@@ -240,6 +247,15 @@ def save_json(path, data):
     with open(path, 'w') as outfile:
         json.dump(data, outfile, indent=2)
         outfile.close()
+
+def extract_proposers(idea, merge_multiple_authors):
+    contributors = []
+    proposers = [idea['authorInfo']['name']]
+    if merge_multiple_authors:
+        contributors = [c['name'] for c in idea['contributors']]
+
+    all_authors = proposers + contributors
+    return ', '.join(all_authors)
 
 def extract_custom_fields(idea, relevant_keys):
     # Create a temporary idea dict only with relevant keys extracted from
