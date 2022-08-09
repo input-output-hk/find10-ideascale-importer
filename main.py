@@ -13,7 +13,7 @@ from rich import print
 app = typer.Typer()
 
 IDEASCALE_API_URL = "https://cardano.ideascale.com/a/rest"
-MAX_PAGES_TO_QUERY = 1
+MAX_PAGES_TO_QUERY = 50
 
 @app.command()
 def import_fund(
