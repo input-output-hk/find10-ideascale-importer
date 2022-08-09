@@ -1,5 +1,5 @@
 {
-  "proposer_url": "website__github_repository__or_any_other_relevant_link__",
+  "proposer_url": ["relevant_link_1", "website__github_repository__or_any_other_relevant_link__", "relevant_link_3"],
   "proposal_solution": "problem_solution",
   "proposal_brief": "challenge_brief",
   "proposal_importance": "importance",

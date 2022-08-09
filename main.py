@@ -279,7 +279,7 @@ def extract_relevant_keys(mappings):
 def extract_mapping(key, idea):
     if isinstance(key, list):
         for k in key:
-            if k in idea:
+            if k in idea and (len(idea[k]) > 0):
                 return idea[k]
     else:
         if key in idea:
