@@ -20,6 +20,7 @@
     "proposal_importance": "string",
     "proposal_goal": "string",
     "proposal_metrics": "string",
-    "proposal_solution": "string"
+    "proposal_solution": "string",
+    "proposers": "list"
   }
 }

@@ -13,7 +13,18 @@ from rich import print
 app = typer.Typer()
 
 IDEASCALE_API_URL = "https://cardano.ideascale.com/a/rest"
-MAX_PAGES_TO_QUERY = 50
+MAX_PAGES_TO_QUERY = 100
+
+def options_validation(ctx: typer.Context, value: bool):
+    '''
+    Validate that only one of the options `merge_multiple_authors` and
+    `authors_as_list` is set to True.
+    '''
+    if ('merge_multiple_authors' in ctx.params):
+        if (value and ctx.params['merge_multiple_authors'] == value):
+            raise typer.BadParameter("""merge_multiple_authors and
+                authors_as_list can't be active at the same time.""")
+    return value
 
 @app.command()
 def import_fund(
@@ -26,6 +37,11 @@ def import_fund(
     merge_multiple_authors: bool = typer.Option(
         False,
         help="When active includes and merge contributors name in author field"
+    ),
+    authors_as_list: bool = typer.Option(
+        False,
+        help="Export authors as a list of objects in place of an author field",
+        callback=options_validation
     ),
     stages: List[int] = typer.Option(
         [],
@@ -55,18 +71,31 @@ def import_fund(
     ),
     output_dir: str = typer.Option("meta/fund9", help="Output dir for results"),
 ):
+    authors_output = 'std'
+    if authors_as_list:
+        authors_output = 'list'
+    if merge_multiple_authors:
+        authors_output = 'merged_str'
     # Load and prepare
     mappings = json.load(open(f"{proposals_map}"))
     funds_format = json.load(open(f"{funds_format}"))
     challenges_format = json.load(open(f"{challenges_format}"))
     proposals_format = json.load(open(f"{proposals_format}"))
     reviews_format = json.load(open(f"{reviews_format}"))
-    assessments = transform_assessments(
-        pd.read_csv(assessments),
-        reviews_format
-    )
-    withdrawn_proposals = pd.read_csv(withdrawn)
+    if assessments:
+        assessments = transform_assessments(
+            pd.read_csv(assessments),
+            reviews_format
+        )
+    else:
+        assessments = False
 
+    scores = get_scores(assessments)
+    reviews = get_reviews(assessments, reviews_format)
+    if withdrawn != '':
+        withdrawn = pd.read_csv(withdrawn)
+    else:
+        withdrawn = False
     # Get local and remote data
     e_fund = get_fund(fund, threshold, fund_goal)
     challenges = get_challenges(fund, fund_group_id, api_token)
@@ -78,11 +107,9 @@ def import_fund(
         mappings,
         chain_vote_type,
         assessments,
-        merge_multiple_authors
+        authors_output
     )
-    reviews = get_reviews(assessments, reviews_format)
-    scores = get_scores(assessments)
-    excluded = transform_excluded(withdrawn_proposals)
+    excluded = transform_excluded(withdrawn)
 
     # Export relevant data
     print(f"[yellow]Saving data...[/yellow]")
@@ -133,8 +160,8 @@ def get_challenges(fund_id, fund_group_id, api_token):
                     "id": idx + 1,
                     "title": title,
                     "challenge_type": challenge_type,
-                    # canonical URL from the API query points to brief instead
-                    # of proposals
+                    # canonical URL from the API query points to challenge brief
+                    # instead of proposals list
                     "challenge_url": f"https://cardano.ideascale.com/c/campaigns/{res['id']}/",
                     "description": strip_tags(res["description"]),
                     "fund_id": fund_id,
@@ -156,7 +183,7 @@ def get_proposals(
     mappings,
     chain_vote_type,
     assessments,
-    merge_multiple_authors
+    authors_output
 ):
     print(f"[yellow]Requesting proposals...[/yellow]")
     page_size = 50
@@ -170,7 +197,6 @@ def get_proposals(
             for idx, idea in enumerate(response):
                 challenge = find_challenge(idea['campaignId'], challenges)
                 temp_idea = extract_custom_fields(idea, relevant_keys)
-                proposers_name = extract_proposers(idea, merge_multiple_authors)
                 parsed_idea = {
                     "category_name": f"Fund {fund_id}",
                     "chain_vote_options": "blank,yes,no",
@@ -182,10 +208,16 @@ def get_proposals(
                     "proposal_impact_score": extract_score(idea["id"], assessments),
                     "proposal_summary": strip_tags(idea["text"]),
                     "proposal_title": strip_tags(idea["title"]),
-                    "proposal_url": idea["url"],
-                    "proposer_email": idea["authorInfo"]["email"],
-                    "proposer_name": proposers_name
+                    "proposal_url": idea["url"]
                 }
+                if authors_output == 'std' or authors_output == 'merged_str':
+                    proposers_name = extract_proposers(idea, authors_output)
+                    parsed_idea['proposer_email'] = idea["authorInfo"]["email"]
+                    parsed_idea['proposer_name'] = proposers_name
+                else:
+                    proposers = extract_proposers(idea, authors_output)
+                    parsed_idea['proposers'] = proposers
+
                 for k in mappings:
                     extracted = extract_mapping(mappings[k], temp_idea)
                     if extracted:
@@ -201,6 +233,8 @@ def get_proposals(
 
 def get_reviews(assessments, reviews_map):
     print(f"[yellow]Preparing reviews...[/yellow]")
+    if assessments is False:
+        return []
     relevant = assessments[reviews_map['cols'].keys()]
     reviews = relevant.rename(columns = reviews_map['cols'])
     reviews = reviews.to_dict('records')
@@ -211,6 +245,8 @@ def round_mean(x):
 
 def get_scores(assessments):
     print(f"[yellow]Preparing proposals scores...[/yellow]")
+    if assessments is False:
+        return pd.DataFrame([])
     # Calculate scores from assessments. Group by proposal id and calculate avg
     all_proposals = assessments.groupby('proposal_id', as_index=False).agg({
         'Rating': round_mean
@@ -240,7 +276,7 @@ def ideascale_get(url, token):
         else:
             print(f"Error {r.status_code}")
     except Exception as e:
-        print("Fuck Ideascale")
+        print("Something wrong with Ideascale")
         print(e)
 
 def save_json(path, data):
@@ -248,14 +284,27 @@ def save_json(path, data):
         json.dump(data, outfile, indent=2)
         outfile.close()
 
-def extract_proposers(idea, merge_multiple_authors):
+def extract_proposers(idea, authors_output):
     contributors = []
-    proposers = [idea['authorInfo']['name']]
-    if merge_multiple_authors:
-        contributors = [c['name'] for c in idea['contributors']]
+    if authors_output == 'std' or authors_output == 'merged_str':
+        proposers = [idea['authorInfo']['name']]
+        if authors_output == 'merged_str':
+            contributors = [c['name'] for c in idea['contributors']]
+        all_authors = proposers + contributors
+        return ', '.join(all_authors)
+    else:
+        proposers = [{
+            'name': idea['authorInfo']['name'],
+            'email': idea['authorInfo']['email'],
+            'main': True
+        }]
+        contributors = [
+            {'name': c['name'], 'email': c['email']}
+            for c in idea['contributors']
+        ]
+        return proposers + contributors
 
-    all_authors = proposers + contributors
-    return ', '.join(all_authors)
+
 
 def extract_custom_fields(idea, relevant_keys):
     # Create a temporary idea dict only with relevant keys extracted from
@@ -288,6 +337,8 @@ def extract_mapping(key, idea):
 
 def extract_score(id, assessments):
     # Query assessments by proposal_id and calculate avg of scores.
+    if assessments is False:
+        return "0"
     mask = assessments.query(f"proposal_id == {id}")
     score = mask['Rating'].mean()
     return str(int(np.round(score, 2) * 100))
@@ -331,13 +382,20 @@ def cast_field(value, dtype):
         return float(value)
     elif (dtype == 'bool'):
         return value.lower() == "true"
+    elif (dtype == 'list'):
+        return value
     else:
         return str(value)
 
 def export_format(elements, ex_format):
     # Map list of elements filtering only valid fields
     return [
-        dict((k, cast_field(el[k], ex_format['export_cols'][k])) for k in ex_format['export_cols'].keys() if k in el)
+        dict(
+            (k, cast_field(el[k], ex_format['export_cols'][k]))
+            for k in ex_format['export_cols'].keys()
+            if k in el
+        )
+
         for el in elements
     ]
 
@@ -346,8 +404,10 @@ def transform_assessments(assessments, reviews_map):
     assessments['Rating'] = assessments[reviews_map['rating_cols']].mean(axis=1)
     return assessments
 
-def transform_excluded(widthdrawn_proposals):
+def transform_excluded(widthdrawn):
     print(f"[yellow]Preparing withdrawn proposals...[/yellow]")
+    if widthdrawn is False:
+        return []
     proposals = widthdrawn_proposals.to_dict('records')
     ids = [proposal['proposal_id'] for proposal in proposals]
     return ids
