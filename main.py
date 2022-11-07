@@ -47,6 +47,10 @@ def import_fund(
         [],
         help="List of stages ids that will be pulled from Ideascale"
     ),
+    stage_keys: List[str] = typer.Option(
+        [],
+        help="List of stage keys that will be pulled from Ideascale"
+    ),
     assessments: str = typer.Option("", help="Valid assessments CSV file"),
     withdrawn: str = typer.Option("", help="Withdrawn proposals CSV file"),
     proposals_map: str = typer.Option(
@@ -99,16 +103,29 @@ def import_fund(
     # Get local and remote data
     e_fund = get_fund(fund, threshold, fund_goal)
     challenges = get_challenges(fund, fund_group_id, api_token)
-    proposals = get_proposals(
-        stages,
-        fund,
-        challenges,
-        api_token,
-        mappings,
-        chain_vote_type,
-        assessments,
-        authors_output
-    )
+    if len(stage_keys) > 0:
+        proposals = _get_proposals(
+            stage_keys,
+            fund,
+            challenges,
+            api_token,
+            mappings,
+            chain_vote_type,
+            assessments,
+            authors_output
+        )
+    elif len(stage_ids) > 0:
+        proposals = get_proposals(
+            stages,
+            fund,
+            challenges,
+            api_token,
+            mappings,
+            chain_vote_type,
+            assessments,
+            authors_output
+        )
+
     excluded = transform_excluded(withdrawn)
 
     # Export relevant data
@@ -174,6 +191,65 @@ def get_challenges(fund_id, fund_group_id, api_token):
         f"[bold green]Total challenges pulled: {len(challenges)}[/bold green]"
     )
     return challenges
+
+def _get_proposals(
+    stage_ids,
+    fund_id,
+    challenges,
+    api_token,
+    mappings,
+    chain_vote_type,
+    assessments,
+    authors_output
+):
+    print(f"[yellow]Requesting proposals...[/yellow]")
+    page_size = 50
+    ideas = []
+    relevant_keys = extract_relevant_keys(mappings)
+    internal_id = 0
+    for challenge in challenges:
+        for stage in stage_ids:
+            for page in range(MAX_PAGES_TO_QUERY):
+                url = f"{IDEASCALE_API_URL}/v1/campaigns/{challenge['internal_id']}/ideas/status/custom/{stage}/{page}/{page_size}"
+                response = ideascale_get(url, api_token)
+                for idx, idea in enumerate(response):
+                    #challenge = find_challenge(idea['campaignId'], challenges)
+                    temp_idea = extract_custom_fields(idea, relevant_keys)
+                    parsed_idea = {
+                        "category_name": f"Fund {fund_id}",
+                        "chain_vote_options": "blank,yes,no",
+                        "challenge_id": challenge["id"],
+                        "challenge_type": challenge["challenge_type"],
+                        "chain_vote_type": chain_vote_type,
+                        "internal_id": internal_id,
+                        "proposal_id": idea["id"],
+                        "proposal_impact_score": extract_score(idea["id"], assessments),
+                        "proposal_summary": strip_tags(idea["text"]),
+                        "proposal_title": strip_tags(idea["title"]),
+                        "proposal_url": idea["url"]
+                    }
+                    if authors_output == 'std' or authors_output == 'merged_str':
+                        proposers_name = extract_proposers(idea, authors_output)
+                        parsed_idea['proposer_email'] = idea["authorInfo"]["email"]
+                        parsed_idea['proposer_name'] = proposers_name
+                    else:
+                        proposers = extract_proposers(idea, authors_output)
+                        parsed_idea['proposers'] = proposers
+
+                    for k in mappings:
+                        extracted = extract_mapping(mappings[k], temp_idea)
+                        if extracted:
+                            parsed_idea[k] = extracted
+                    ideas.append(parsed_idea)
+                    internal_id = internal_id + 1
+                if (len(response) < page_size):
+                    # Break page loop if there are no results - thanks IdeaScale
+                    # pagination implementation
+                    break
+    print(f"[bold green]Total ideas pulled: {len(ideas)}[/bold green]")
+    return ideas
+
+
 
 def get_proposals(
     stage_ids,
