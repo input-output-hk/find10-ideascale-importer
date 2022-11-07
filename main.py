@@ -309,7 +309,7 @@ def parse_idea(
     }
     if authors_output == 'std' or authors_output == 'merged_str':
         proposers_name = extract_proposers(idea, authors_output)
-        parsed_idea['proposer_email'] = idea["authorInfo"]["email"]
+        # parsed_idea['proposer_email'] = idea["authorInfo"]["email"]
         parsed_idea['proposer_name'] = proposers_name
     else:
         proposers = extract_proposers(idea, authors_output)
@@ -393,11 +393,17 @@ def extract_proposers(idea, authors_output):
     else:
         proposers = [{
             'name': idea['authorInfo']['name'],
-            'email': idea['authorInfo']['email'],
+            #'email': idea['authorInfo']['email'],
             'main': True
         }]
+        '''
         contributors = [
             {'name': c['name'], 'email': c['email']}
+            for c in idea['contributors']
+        ]
+        '''
+        contributors = [
+            {'name': c['name']}
             for c in idea['contributors']
         ]
         return proposers + contributors
