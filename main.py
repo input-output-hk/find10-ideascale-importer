@@ -57,6 +57,10 @@ def import_fund(
         "templates/tags.json",
         help="Mapping for proposals"
     ),
+    extra_fields_map: str = typer.Option(
+        "templates/proposals_extra_fields.json",
+        help="Mappings for extra fields"
+    ),
     funds_format: str = typer.Option(
         "templates/funds_format.json",
         help="Mapping for funds transformation."
@@ -82,6 +86,7 @@ def import_fund(
         authors_output = 'merged_str'
     # Load and prepare
     mappings = json.load(open(f"{proposals_map}"))
+    extra_fields_map = json.load(open(f"{extra_fields_map}"))
     funds_format = json.load(open(f"{funds_format}"))
     challenges_format = json.load(open(f"{challenges_format}"))
     proposals_format = json.load(open(f"{proposals_format}"))
@@ -110,6 +115,7 @@ def import_fund(
             challenges,
             api_token,
             mappings,
+            extra_fields_map,
             chain_vote_type,
             assessments,
             authors_output
@@ -121,6 +127,7 @@ def import_fund(
             challenges,
             api_token,
             mappings,
+            extra_fields_map,
             chain_vote_type,
             assessments,
             authors_output
@@ -198,6 +205,7 @@ def _get_proposals(
     challenges,
     api_token,
     mappings,
+    extra_fields_map,
     chain_vote_type,
     assessments,
     authors_output
@@ -206,6 +214,7 @@ def _get_proposals(
     page_size = 50
     ideas = []
     relevant_keys = extract_relevant_keys(mappings)
+    relevant_extra_keys = extract_relevant_keys(extra_fields_map)
     internal_id = 0
     for challenge in challenges:
         for stage in stage_ids:
@@ -217,6 +226,8 @@ def _get_proposals(
                         idea,
                         fund_id,
                         relevant_keys,
+                        relevant_extra_keys,
+                        extra_fields_map,
                         challenge,
                         chain_vote_type,
                         internal_id,
@@ -239,6 +250,7 @@ def get_proposals(
     challenges,
     api_token,
     mappings,
+    extra_fields_map,
     chain_vote_type,
     assessments,
     authors_output
@@ -247,6 +259,7 @@ def get_proposals(
     page_size = 50
     ideas = []
     relevant_keys = extract_relevant_keys(mappings)
+    relevant_extra_keys = extract_relevant_keys(extra_fields_map)
     internal_id = 0
     for stage in stage_ids:
         for page in range(MAX_PAGES_TO_QUERY):
@@ -258,6 +271,8 @@ def get_proposals(
                     idea,
                     fund_id,
                     relevant_keys,
+                    relevant_extra_keys,
+                    extra_fields_map,
                     challenge,
                     chain_vote_type,
                     internal_id,
@@ -275,9 +290,10 @@ def get_proposals(
     return ideas
 
 def parse_idea(
-    idea, fund_id, relevant_keys, challenge, chain_vote_type, internal_id, assessments, authors_output, mappings
+    idea, fund_id, relevant_keys, relevant_extra_keys, extra_fields_map, challenge, chain_vote_type, internal_id, assessments, authors_output, mappings
 ):
     temp_idea = extract_custom_fields(idea, relevant_keys)
+    extra_fields_idea = extract_custom_fields(idea, relevant_extra_keys)
     parsed_idea = {
         "category_name": f"Fund {fund_id}",
         "chain_vote_options": "blank,yes,no",
@@ -303,6 +319,13 @@ def parse_idea(
         extracted = extract_mapping(mappings[k], temp_idea)
         if extracted:
             parsed_idea[k] = extracted
+
+    for k in extra_fields_map:
+        extracted = extract_mapping(extra_fields_map[k], extra_fields_idea)
+        if extracted:
+            if 'extra_fields' not in parsed_idea:
+                parsed_idea['extra_fields'] = {}
+            parsed_idea['extra_fields'][k] = extracted
     return parsed_idea
 
 
@@ -458,6 +481,8 @@ def cast_field(value, dtype):
     elif (dtype == 'bool'):
         return value.lower() == "true"
     elif (dtype == 'list'):
+        return value
+    elif (dtype == 'dict'):
         return value
     else:
         return str(value)
