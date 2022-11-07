@@ -213,33 +213,17 @@ def _get_proposals(
                 url = f"{IDEASCALE_API_URL}/v1/campaigns/{challenge['internal_id']}/ideas/status/custom/{stage}/{page}/{page_size}"
                 response = ideascale_get(url, api_token)
                 for idx, idea in enumerate(response):
-                    #challenge = find_challenge(idea['campaignId'], challenges)
-                    temp_idea = extract_custom_fields(idea, relevant_keys)
-                    parsed_idea = {
-                        "category_name": f"Fund {fund_id}",
-                        "chain_vote_options": "blank,yes,no",
-                        "challenge_id": challenge["id"],
-                        "challenge_type": challenge["challenge_type"],
-                        "chain_vote_type": chain_vote_type,
-                        "internal_id": internal_id,
-                        "proposal_id": idea["id"],
-                        "proposal_impact_score": extract_score(idea["id"], assessments),
-                        "proposal_summary": strip_tags(idea["text"]),
-                        "proposal_title": strip_tags(idea["title"]),
-                        "proposal_url": idea["url"]
-                    }
-                    if authors_output == 'std' or authors_output == 'merged_str':
-                        proposers_name = extract_proposers(idea, authors_output)
-                        parsed_idea['proposer_email'] = idea["authorInfo"]["email"]
-                        parsed_idea['proposer_name'] = proposers_name
-                    else:
-                        proposers = extract_proposers(idea, authors_output)
-                        parsed_idea['proposers'] = proposers
-
-                    for k in mappings:
-                        extracted = extract_mapping(mappings[k], temp_idea)
-                        if extracted:
-                            parsed_idea[k] = extracted
+                    parsed_idea = parse_idea(
+                        idea,
+                        fund_id,
+                        relevant_keys,
+                        challenge,
+                        chain_vote_type,
+                        internal_id,
+                        assessments,
+                        authors_output,
+                        mappings
+                    )
                     ideas.append(parsed_idea)
                     internal_id = internal_id + 1
                 if (len(response) < page_size):
@@ -248,8 +232,6 @@ def _get_proposals(
                     break
     print(f"[bold green]Total ideas pulled: {len(ideas)}[/bold green]")
     return ideas
-
-
 
 def get_proposals(
     stage_ids,
@@ -272,32 +254,17 @@ def get_proposals(
             response = ideascale_get(url, api_token)
             for idx, idea in enumerate(response):
                 challenge = find_challenge(idea['campaignId'], challenges)
-                temp_idea = extract_custom_fields(idea, relevant_keys)
-                parsed_idea = {
-                    "category_name": f"Fund {fund_id}",
-                    "chain_vote_options": "blank,yes,no",
-                    "challenge_id": challenge["id"],
-                    "challenge_type": challenge["challenge_type"],
-                    "chain_vote_type": chain_vote_type,
-                    "internal_id": internal_id,
-                    "proposal_id": idea["id"],
-                    "proposal_impact_score": extract_score(idea["id"], assessments),
-                    "proposal_summary": strip_tags(idea["text"]),
-                    "proposal_title": strip_tags(idea["title"]),
-                    "proposal_url": idea["url"]
-                }
-                if authors_output == 'std' or authors_output == 'merged_str':
-                    proposers_name = extract_proposers(idea, authors_output)
-                    parsed_idea['proposer_email'] = idea["authorInfo"]["email"]
-                    parsed_idea['proposer_name'] = proposers_name
-                else:
-                    proposers = extract_proposers(idea, authors_output)
-                    parsed_idea['proposers'] = proposers
-
-                for k in mappings:
-                    extracted = extract_mapping(mappings[k], temp_idea)
-                    if extracted:
-                        parsed_idea[k] = extracted
+                parsed_idea = parse_idea(
+                    idea,
+                    fund_id,
+                    relevant_keys,
+                    challenge,
+                    chain_vote_type,
+                    internal_id,
+                    assessments,
+                    authors_output,
+                    mappings
+                )
                 ideas.append(parsed_idea)
                 internal_id = internal_id + 1
             if (len(response) < page_size):
@@ -306,6 +273,38 @@ def get_proposals(
                 break
     print(f"[bold green]Total ideas pulled: {len(ideas)}[/bold green]")
     return ideas
+
+def parse_idea(
+    idea, fund_id, relevant_keys, challenge, chain_vote_type, internal_id, assessments, authors_output, mappings
+):
+    temp_idea = extract_custom_fields(idea, relevant_keys)
+    parsed_idea = {
+        "category_name": f"Fund {fund_id}",
+        "chain_vote_options": "blank,yes,no",
+        "challenge_id": challenge["id"],
+        "challenge_type": challenge["challenge_type"],
+        "chain_vote_type": chain_vote_type,
+        "internal_id": internal_id,
+        "proposal_id": idea["id"],
+        "proposal_impact_score": extract_score(idea["id"], assessments),
+        "proposal_summary": strip_tags(idea["text"]),
+        "proposal_title": strip_tags(idea["title"]),
+        "proposal_url": idea["url"]
+    }
+    if authors_output == 'std' or authors_output == 'merged_str':
+        proposers_name = extract_proposers(idea, authors_output)
+        parsed_idea['proposer_email'] = idea["authorInfo"]["email"]
+        parsed_idea['proposer_name'] = proposers_name
+    else:
+        proposers = extract_proposers(idea, authors_output)
+        parsed_idea['proposers'] = proposers
+
+    for k in mappings:
+        extracted = extract_mapping(mappings[k], temp_idea)
+        if extracted:
+            parsed_idea[k] = extracted
+    return parsed_idea
+
 
 def get_reviews(assessments, reviews_map):
     print(f"[yellow]Preparing reviews...[/yellow]")
