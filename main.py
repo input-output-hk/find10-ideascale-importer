@@ -54,7 +54,7 @@ def import_fund(
     assessments: str = typer.Option("", help="Valid assessments CSV file"),
     withdrawn: str = typer.Option("", help="Withdrawn proposals CSV file"),
     proposals_map: str = typer.Option(
-        "templates/tags.json",
+        "templates/proposals_map.json",
         help="Mapping for proposals"
     ),
     extra_fields_map: str = typer.Option(
