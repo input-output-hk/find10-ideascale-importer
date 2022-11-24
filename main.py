@@ -120,7 +120,7 @@ def import_fund(
             assessments,
             authors_output
         )
-    elif len(stage_ids) > 0:
+    elif len(stages) > 0:
         proposals = get_proposals(
             stages,
             fund,
