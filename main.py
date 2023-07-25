@@ -307,7 +307,7 @@ def parse_idea(
         "proposal_title": strip_tags(idea["title"]),
         "proposal_url": idea["url"],
         "files_url": {
-            "open_source": idea["customFieldsByKey"]["f10_open_source"],
+            "open_source": idea["customFieldsByKey"]["f10_open_source_choice"],
             "external_link1": idea["customFieldsByKey"]["f10_external_link"],
             "external_link2": idea["customFieldsByKey"]["f10_external_link_2"],
             "external_link3": idea["customFieldsByKey"]["f10_external_link_3"],
