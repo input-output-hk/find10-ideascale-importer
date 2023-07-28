@@ -77,7 +77,7 @@ def import_fund(
         "templates/reviews_format.json",
         help="Mapping for assessments transformation."
     ),
-    output_dir: str = typer.Option("meta/fund9", help="Output dir for results"),
+    output_dir: str = typer.Option("meta/fund10", help="Output dir for results"),
 ):
     authors_output = 'std'
     if authors_as_list:
