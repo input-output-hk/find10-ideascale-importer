@@ -7,6 +7,6 @@
   "proposal_metrics": "key_metrics_to_measure",
   "proposal_public_key": "ada_payment_address__",
   "proposal_funds": ["f10_requested_funds", "requested_funds_in_ada","requested_funds_coti"],
-  "proposal_relevant_experience": "relevant_experience",
+  "proposal_relevant_experience": "f10_project_team",
   "proposal_why": "proposal_why"
 }
