@@ -52,4 +52,4 @@ run:
 
     # Run the script
     RUN --no-cache --secret api_token python3 main.py --fund $fund --fund-group-id $fund_group_id $stages --output-dir $output_dir --api-token $api_token
-    SAVE ARTIFACT $output_dir
+    SAVE ARTIFACT $output_dir data
