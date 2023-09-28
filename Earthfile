@@ -35,7 +35,7 @@ build:
 #
 # This target requires that the `api_token` to be provided as a secret.
 #
-# The simplest way to accomplish this, is to put it in a `./secrets` file, so that Earthly can retrieve it.
+# The simplest way to accomplish this, is to put it in a `./secret` file, so that Earthly can retrieve it.
 # It also needs to be provided by CI to work there.
 run:
     FROM +build
@@ -44,7 +44,7 @@ run:
     ARG api_token
     ARG fund="10"
     ARG fund_group_id="63"
-    ARG output_dir="./deployment"
+    ARG output_dir="./data"
     ARG stages="--stages 4590 --stages 4596 --stages 4602 --stages 4608 --stages 4614 --stages 4620 --stages 4626 --stages 4632 --stages 4638 --stages 4644 --stages 4650 --stages 4656 --stages 4662"
 
     # Reset the $output_dir
