@@ -34,6 +34,7 @@ def options_validation(ctx: typer.Context, value: bool):
 
 @app.command()
 def import_fund(
+    api_url: str = typer.Option(IDEASCALE_API_URL, help="Base URL for Ideascale API. e.g. "),
     api_token: str = typer.Option("", help="Ideascale API token."),
     fund: int = typer.Option(8, help="Fund number."),
     fund_group_id: int = typer.Option(1, help="Ideascale Campaigns group id"),
@@ -103,16 +104,17 @@ def import_fund(
     else:
         withdrawn = False
     # Get local and remote data
-    themes = get_themes(fund_campaign_id, api_token)
+    themes = get_themes(api_url, fund_campaign_id, api_token)
     # OVERRIDE fund_goal to set the current time in RFC3339 format
     fund_goal = {
         "last_snapshot": strict_rfc3339.now_to_rfc3339_utcoffset(integer=True),
         "themes": themes,
     }
     e_fund = get_fund(fund, threshold, fund_goal)
-    challenges = get_challenges(fund, fund_group_id, api_token)
+    challenges = get_challenges(api_url, fund, fund_group_id, api_token)
     if len(stage_keys) > 0:
         proposals = _get_proposals(
+            api_url,
             stage_keys,
             fund,
             challenges,
@@ -125,6 +127,7 @@ def import_fund(
         )
     elif len(stages) > 0:
         proposals = get_proposals(
+            api_url,
             stages,
             fund,
             challenges,
@@ -153,10 +156,10 @@ def import_fund(
     print(f"[green bold]All data saved in {output_dir}.[/green bold]")
 
 
-def get_themes(fund_campaign_id, api_token):
+def get_themes(api_url,fund_campaign_id, api_token):
     print("[yellow]Requesting themes...[/yellow]")
     themes = None
-    url = f"{IDEASCALE_API_URL}/v1/customFields/idea/campaigns/{fund_campaign_id}"
+    url = f"{api_url}/v1/customFields/idea/campaigns/{fund_campaign_id}"
     response = ideascale_get(url, api_token)
     if response is not None:
         theme_data = [d for d in response if d.get("key") == THEME_CUSTOM_KEY]
@@ -175,9 +178,9 @@ def get_fund(fund_id, threshold, goal):
     return [{"id": fund_id, "goal": goal, "threshold": threshold, "rewards_info": ""}]
 
 
-def get_challenges(fund_id, fund_group_id, api_token):
+def get_challenges(api_url, fund_id, fund_group_id, api_token):
     print("[yellow]Requesting challenges...[/yellow]")
-    url = f"{IDEASCALE_API_URL}/v1/campaigns/groups/{fund_group_id}"
+    url = f"{api_url}/v1/campaigns/groups/{fund_group_id}"
     response = ideascale_get(url, api_token)
     if response is not None:
         challenges = []
@@ -210,6 +213,7 @@ def get_challenges(fund_id, fund_group_id, api_token):
 
 
 def _get_proposals(
+    api_url,
     stage_ids,
     fund_id,
     challenges,
@@ -229,7 +233,7 @@ def _get_proposals(
     for challenge in challenges:
         c_id = challenge["internal_id"]
         for stage in stage_ids:
-            url_prefix = f"{IDEASCALE_API_URL}/v1/campaigns/{c_id}/ideas/status/custom"
+            url_prefix = f"{api_url}/v1/campaigns/{c_id}/ideas/status/custom"
             for page in range(MAX_PAGES_TO_QUERY):
                 url = f"{url_prefix}/{stage}/{page}/{page_size}"
                 response = ideascale_get(url, api_token)
@@ -261,6 +265,7 @@ def _get_proposals(
 
 
 def get_proposals(
+    api_url,
     stage_ids,
     fund_id,
     challenges,
@@ -279,7 +284,7 @@ def get_proposals(
     internal_id = 0
     for stage in stage_ids:
         for page in range(MAX_PAGES_TO_QUERY):
-            url = f"{IDEASCALE_API_URL}/v1/stages/{stage}/ideas/{page}/{page_size}"
+            url = f"{api_url}/v1/stages/{stage}/ideas/{page}/{page_size}"
             response = ideascale_get(url, api_token)
             if response is not None:
                 for idea in response:
