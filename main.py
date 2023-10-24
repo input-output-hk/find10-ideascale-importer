@@ -85,7 +85,7 @@ def import_fund(
     proposals = []
 
     # Load and prepare
-    mappings = json.load(open(f"{proposals_map}"))
+    proposal_mappings = json.load(open(f"{proposals_map}"))
     extra_fields_map = json.load(open(f"{extra_fields_map}"))
     funds_format = json.load(open(f"{funds_format}"))
     challenges_format = json.load(open(f"{challenges_format}"))
@@ -117,7 +117,7 @@ def import_fund(
             fund,
             challenges,
             api_token,
-            mappings,
+            proposal_mappings,
             extra_fields_map,
             chain_vote_type,
             assessments,
@@ -129,7 +129,7 @@ def import_fund(
             fund,
             challenges,
             api_token,
-            mappings,
+            proposal_mappings,
             extra_fields_map,
             chain_vote_type,
             assessments,
@@ -159,7 +159,7 @@ def get_themes(fund_campaign_id, api_token):
     url = f"{IDEASCALE_API_URL}/v1/customFields/idea/campaigns/{fund_campaign_id}"
     response = ideascale_get(url, api_token)
     if response is not None:
-        theme_data = [ data for data in response if data.get("key") == THEME_CUSTOM_KEY ]
+        theme_data = [d for d in response if d.get("key") == THEME_CUSTOM_KEY]
         if len(theme_data) > 0:
             themes = theme_data[0]["options"].split("\r\n")
             print(f"[bold yellow]Obtained themes: {themes}[/bold yellow]")
@@ -168,6 +168,7 @@ def get_themes(fund_campaign_id, api_token):
     else:
         print("[bold red]Unable to get themes[/bold red]")
     return themes
+
 
 def get_fund(fund_id, threshold, goal):
     print("[yellow]Preparing fund...[/yellow]")
@@ -213,7 +214,7 @@ def _get_proposals(
     fund_id,
     challenges,
     api_token,
-    mappings,
+    proposal_mappings,
     extra_fields_map,
     chain_vote_type,
     assessments,
@@ -222,7 +223,7 @@ def _get_proposals(
     print("[yellow]Requesting proposals...[/yellow]")
     page_size = 50
     ideas = []
-    relevant_keys = extract_relevant_keys(mappings)
+    relevant_keys = extract_relevant_keys(proposal_mappings)
     relevant_extra_keys = extract_relevant_keys(extra_fields_map)
     internal_id = 0
     for challenge in challenges:
@@ -233,7 +234,7 @@ def _get_proposals(
                 url = f"{url_prefix}/{stage}/{page}/{page_size}"
                 response = ideascale_get(url, api_token)
                 if response is not None:
-                    for idx, idea in enumerate(response):
+                    for idea in response:
                         parsed_idea = parse_idea(
                             idea,
                             fund_id,
@@ -245,7 +246,7 @@ def _get_proposals(
                             internal_id,
                             assessments,
                             authors_output,
-                            mappings,
+                            proposal_mappings,
                         )
                         ideas.append(parsed_idea)
                         internal_id = internal_id + 1
@@ -264,7 +265,7 @@ def get_proposals(
     fund_id,
     challenges,
     api_token,
-    mappings,
+    proposal_mappings,
     extra_fields_map,
     chain_vote_type,
     assessments,
@@ -273,7 +274,7 @@ def get_proposals(
     print("[yellow]Requesting proposals...[/yellow]")
     page_size = 50
     ideas = []
-    relevant_keys = extract_relevant_keys(mappings)
+    relevant_keys = extract_relevant_keys(proposal_mappings)
     relevant_extra_keys = extract_relevant_keys(extra_fields_map)
     internal_id = 0
     for stage in stage_ids:
@@ -281,7 +282,7 @@ def get_proposals(
             url = f"{IDEASCALE_API_URL}/v1/stages/{stage}/ideas/{page}/{page_size}"
             response = ideascale_get(url, api_token)
             if response is not None:
-                for idx, idea in enumerate(response):
+                for idea in response:
                     challenge = find_challenge(idea["campaignId"], challenges)
                     parsed_idea = parse_idea(
                         idea,
@@ -294,7 +295,7 @@ def get_proposals(
                         internal_id,
                         assessments,
                         authors_output,
-                        mappings,
+                        proposal_mappings,
                     )
                     ideas.append(parsed_idea)
                     internal_id = internal_id + 1
@@ -319,7 +320,7 @@ def parse_idea(
     internal_id,
     assessments,
     authors_output,
-    mappings,
+    proposal_mappings,
 ):
     temp_idea = extract_custom_fields(idea, relevant_keys)
     extra_fields_idea = extract_custom_fields(idea, relevant_extra_keys)
@@ -351,8 +352,8 @@ def parse_idea(
         proposers = extract_proposers(idea, authors_output)
         parsed_idea["proposers"] = proposers
 
-    for k in mappings:
-        extracted = extract_mapping(mappings[k], temp_idea)
+    for k in proposal_mappings:
+        extracted = extract_mapping(proposal_mappings[k], temp_idea)
         if extracted:
             parsed_idea[k] = extracted
 
@@ -465,13 +466,13 @@ def extract_custom_fields(idea, relevant_keys):
     return temp_idea
 
 
-def extract_relevant_keys(mappings):
+def extract_relevant_keys(proposal_mappings):
     relevant_keys = []
-    for k in mappings:
-        if isinstance(mappings[k], list):
-            relevant_keys = relevant_keys + mappings[k]
+    for k in proposal_mappings:
+        if isinstance(proposal_mappings[k], list):
+            relevant_keys = relevant_keys + proposal_mappings[k]
         else:
-            relevant_keys.append(mappings[k])
+            relevant_keys.append(proposal_mappings[k])
     return relevant_keys
 
 
