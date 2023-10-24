@@ -1,6 +1,7 @@
 {
   "export_cols": {
     "id": "string",
+    "internal_id": "string",
     "title": "string",
     "challenge_type": "string",
     "challenge_url": "string",
