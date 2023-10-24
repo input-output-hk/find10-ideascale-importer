@@ -15,6 +15,7 @@ app = typer.Typer()
 
 IDEASCALE_API_URL = "https://cardano.ideascale.com/a/rest"
 MAX_PAGES_TO_QUERY = 100
+THEME_CUSTOM_KEY = "f11_themes"
 
 
 def options_validation(ctx: typer.Context, value: bool):
@@ -36,13 +37,9 @@ def import_fund(
     api_token: str = typer.Option("", help="Ideascale API token."),
     fund: int = typer.Option(8, help="Fund number."),
     fund_group_id: int = typer.Option(1, help="Ideascale Campaigns group id"),
+    fund_campaign_id: int = typer.Option(1, help="Ideascale Campaign id"),
     chain_vote_type: str = typer.Option("private", help="Chain vote type"),
     threshold: int = typer.Option(450, help="Voting threshold"),
-    fund_goal: str = typer.Option(
-        "Lorem ipsum",
-        help="""Fund goal [UNUSED].
-        This field is ignored, and used to set the current time in RFC3339 format.""",
-    ),
     merge_multiple_authors: bool = typer.Option(
         False, help="When active includes and merge contributors name in author field"
     ),
@@ -105,9 +102,13 @@ def import_fund(
         withdrawn = pd.read_csv(withdrawn)
     else:
         withdrawn = False
-    # OVERRIDE fund_goal to set the current time in RFC3339 format
-    fund_goal = strict_rfc3339.now_to_rfc3339_utcoffset(integer=True)
     # Get local and remote data
+    themes = get_themes(fund_campaign_id, api_token)
+    # OVERRIDE fund_goal to set the current time in RFC3339 format
+    fund_goal = {
+        "last_snapshot": strict_rfc3339.now_to_rfc3339_utcoffset(integer=True),
+        "themes": themes,
+    }
     e_fund = get_fund(fund, threshold, fund_goal)
     challenges = get_challenges(fund, fund_group_id, api_token)
     if len(stage_keys) > 0:
@@ -151,6 +152,22 @@ def import_fund(
     save_json(f"{output_dir}/excluded_proposals.json", excluded)
     print(f"[green bold]All data saved in {output_dir}.[/green bold]")
 
+
+def get_themes(fund_campaign_id, api_token):
+    print("[yellow]Requesting themes...[/yellow]")
+    themes = None
+    url = f"{IDEASCALE_API_URL}/v1/customFields/idea/campaigns/{fund_campaign_id}"
+    response = ideascale_get(url, api_token)
+    if response is not None:
+        theme_data = [ data for data in response if data.get("key") == THEME_CUSTOM_KEY ]
+        if len(theme_data) > 0:
+            themes = theme_data[0]["options"].split("\r\n")
+            print(f"[bold yellow]Obtained themes: {themes}[/bold yellow]")
+        else:
+            print("[bold red]No theme data available[/bold red]")
+    else:
+        print("[bold red]Unable to get themes[/bold red]")
+    return themes
 
 def get_fund(fund_id, threshold, goal):
     print("[yellow]Preparing fund...[/yellow]")
@@ -323,6 +340,7 @@ def parse_idea(
             "external_link1": idea["customFieldsByKey"]["f10_external_link"],
             "external_link2": idea["customFieldsByKey"]["f10_external_link_2"],
             "external_link3": idea["customFieldsByKey"]["f10_external_link_3"],
+            "themes": idea["customFieldsByKey"][THEME_CUSTOM_KEY],
         },
     }
     if authors_output == "std" or authors_output == "merged_str":
