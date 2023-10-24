@@ -43,6 +43,7 @@ run:
     # These args can be passed as earthly CLI arguments.
     ARG api_token
     ARG fund="10"
+    ARG fund_campaign_id="395"
     ARG fund_group_id="63"
     ARG output_dir="./data"
     ARG stages="--stages 4590 --stages 4596 --stages 4602 --stages 4608 --stages 4614 --stages 4620 --stages 4626 --stages 4632 --stages 4638 --stages 4644 --stages 4650 --stages 4656 --stages 4662"
@@ -51,5 +52,5 @@ run:
     RUN rm -rf $output_dir && mkdir -p $output_dir
 
     # Run the script
-    RUN --no-cache --secret api_token python3 main.py --fund $fund --fund-group-id $fund_group_id $stages --output-dir $output_dir --api-token $api_token
+    RUN --no-cache --secret api_token python3 main.py --fund $fund --fund-campaign-id $fund_campaign_id --fund-group-id $fund_group_id $stages --output-dir $output_dir --api-token $api_token
     SAVE ARTIFACT $output_dir data
