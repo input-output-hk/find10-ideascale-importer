@@ -107,7 +107,7 @@ def import_fund(
     themes = get_themes(api_url, fund_campaign_id, api_token)
     # OVERRIDE fund_goal to set the current time in RFC3339 format
     fund_goal = {
-        "last_snapshot": strict_rfc3339.now_to_rfc3339_utcoffset(integer=True),
+        "timestamp": strict_rfc3339.now_to_rfc3339_utcoffset(integer=True),
         "themes": themes,
     }
     e_fund = get_fund(fund, threshold, fund_goal)
