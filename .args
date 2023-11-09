@@ -1,0 +1,5 @@
+#fund11 sandbox params
+api_url="https://temp-cardano-sandbox.ideascale.com/a/rest"
+stages="--stages 4573 --stages 4574"
+fund_campaign_id="395 400 399 401 402 403"
+fund="11"
