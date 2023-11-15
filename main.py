@@ -37,8 +37,8 @@ def import_fund(
     api_url: str = typer.Option(IDEASCALE_API_URL, help="Base URL for Ideascale API. e.g. "),
     api_token: str = typer.Option("", help="Ideascale API token."),
     fund: int = typer.Option(8, help="Fund number."),
-    fund_group_id: int = typer.Option(1, help="Ideascale Campaigns group id"),
-    fund_campaign_id: int = typer.Option(1, help="Ideascale Campaign id"),
+    fund_group_id: int = typer.Option(1, help="Ideascale Campaigns group (fund) id"),
+    fund_campaign_id: int = typer.Option(1, help="Ideascale Campaign (challenges) id"),
     chain_vote_type: str = typer.Option("private", help="Chain vote type"),
     threshold: int = typer.Option(450, help="Voting threshold"),
     merge_multiple_authors: bool = typer.Option(
@@ -50,10 +50,10 @@ def import_fund(
         callback=options_validation,
     ),
     stages: List[int] = typer.Option(
-        [], help="List of stages ids that will be pulled from Ideascale"
+        [], help="List of stages (funnel) ids that will be pulled from Ideascale"
     ),
     stage_keys: List[str] = typer.Option(
-        [], help="List of stage keys that will be pulled from Ideascale"
+        [], help="List of stage (funnel) keys that will be pulled from Ideascale"
     ),
     assessments: str = typer.Option("", help="Valid assessments CSV file"),
     withdrawn: str = typer.Option("", help="Withdrawn proposals CSV file"),
@@ -343,9 +343,9 @@ def parse_idea(
         "proposal_url": idea["url"],
         "files_url": {
             "open_source": idea["customFieldsByKey"]["f11_open_source_choice"],
-            "external_link1": idea["customFieldsByKey"]["f11_external_link"],
-            "external_link2": idea["customFieldsByKey"]["f11_external_link_2"],
-            "external_link3": idea["customFieldsByKey"]["f11_external_link_3"],
+            "external_link1": idea["customFieldsByKey"]["f11_link_1"],
+            "external_link2": idea["customFieldsByKey"]["f11_link_2"],
+            "external_link3": idea["customFieldsByKey"]["f11_link_3"],
             "themes": idea["customFieldsByKey"][THEME_CUSTOM_KEY],
         },
     }
@@ -537,6 +537,7 @@ def find_challenge(id, challenges):
         if id == c["internal_id"]:
             return c
     print(f"Error, challenge {id} not found")
+    print(f"Error, challenges {challenges} not found")
     return {}
 
 
