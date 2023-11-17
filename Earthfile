@@ -41,7 +41,7 @@ run:
     FROM +build
     # These args can be passed as earthly CLI arguments.
     ARG api_token
-    ARG api_url="https://temp-cardano-sandbox.ideascale.com/a/rest"
+    ARG ideascale_url="https://temp-cardano-sandbox.ideascale.com"
     ARG fund="11"
     ARG fund_campaign_id="395"
     ARG fund_group_id="91"
@@ -52,5 +52,5 @@ run:
     RUN rm -rf $output_dir && mkdir -p $output_dir
 
     # Run the script
-    RUN --no-cache --secret api_token python3 main.py --fund $fund --fund-campaign-id $fund_campaign_id --fund-group-id $fund_group_id $stages --output-dir $output_dir --api-token $api_token
+    RUN --no-cache --secret api_token python3 main.py --fund $fund --ideascale_url "https://temp-cardano-sandbox.ideascale.com" --fund-campaign-id $fund_campaign_id --fund-group-id $fund_group_id $stages --output-dir $output_dir --api-token $api_token
     SAVE ARTIFACT $output_dir data
