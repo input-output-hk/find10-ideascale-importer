@@ -17,7 +17,6 @@ IDEASCALE_URL = "https://cardano.ideascale.com"
 MAX_PAGES_TO_QUERY = 100
 THEME_CUSTOM_KEY = "f11_themes"
 
-
 def options_validation(ctx: typer.Context, value: bool):
     """
     Validate that only one of the options `merge_multiple_authors` and
