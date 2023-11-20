@@ -13,10 +13,9 @@ import strict_rfc3339
 
 app = typer.Typer()
 
-IDEASCALE_API_URL = "https://cardano.ideascale.com/a/rest"
+IDEASCALE_URL = "https://cardano.ideascale.com"
 MAX_PAGES_TO_QUERY = 100
 THEME_CUSTOM_KEY = "f11_themes"
-
 
 def options_validation(ctx: typer.Context, value: bool):
     """
@@ -34,11 +33,11 @@ def options_validation(ctx: typer.Context, value: bool):
 
 @app.command()
 def import_fund(
-    api_url: str = typer.Option(IDEASCALE_API_URL, help="Base URL for Ideascale API. e.g. "),
+    ideascale_url: str = typer.Option(IDEASCALE_URL, help="Base URL for Ideascale API. e.g. "),
     api_token: str = typer.Option("", help="Ideascale API token."),
     fund: int = typer.Option(8, help="Fund number."),
-    fund_group_id: int = typer.Option(1, help="Ideascale Campaigns group id"),
-    fund_campaign_id: int = typer.Option(1, help="Ideascale Campaign id"),
+    fund_group_id: int = typer.Option(1, help="Ideascale Campaigns group (fund) id"),
+    fund_campaign_id: int = typer.Option(1, help="Ideascale Campaign (challenges) id"),
     chain_vote_type: str = typer.Option("private", help="Chain vote type"),
     threshold: int = typer.Option(450, help="Voting threshold"),
     merge_multiple_authors: bool = typer.Option(
@@ -50,10 +49,10 @@ def import_fund(
         callback=options_validation,
     ),
     stages: List[int] = typer.Option(
-        [], help="List of stages ids that will be pulled from Ideascale"
+        [], help="List of stages (funnel) ids that will be pulled from Ideascale"
     ),
     stage_keys: List[str] = typer.Option(
-        [], help="List of stage keys that will be pulled from Ideascale"
+        [], help="List of stage (funnel) keys that will be pulled from Ideascale"
     ),
     assessments: str = typer.Option("", help="Valid assessments CSV file"),
     withdrawn: str = typer.Option("", help="Withdrawn proposals CSV file"),
@@ -75,7 +74,7 @@ def import_fund(
     reviews_format: str = typer.Option(
         "templates/reviews_format.json", help="Mapping for assessments transformation."
     ),
-    output_dir: str = typer.Option("meta/fund10", help="Output dir for results"),
+    output_dir: str = typer.Option("meta/fund", help="Output dir for results"),
 ):
     authors_output = "std"
     if authors_as_list:
@@ -104,17 +103,17 @@ def import_fund(
     else:
         withdrawn = False
     # Get local and remote data
-    themes = get_themes(api_url, fund_campaign_id, api_token)
+    themes = get_themes(ideascale_url, fund_campaign_id, api_token)
     # OVERRIDE fund_goal to set the current time in RFC3339 format
     fund_goal = {
         "timestamp": strict_rfc3339.now_to_rfc3339_utcoffset(integer=True),
         "themes": themes,
     }
     e_fund = get_fund(fund, threshold, fund_goal)
-    challenges = get_challenges(api_url, fund, fund_group_id, api_token)
+    challenges = get_challenges(ideascale_url, fund, fund_group_id, api_token)
     if len(stage_keys) > 0:
         proposals = _get_proposals(
-            api_url,
+            ideascale_url,
             stage_keys,
             fund,
             challenges,
@@ -127,7 +126,7 @@ def import_fund(
         )
     elif len(stages) > 0:
         proposals = get_proposals(
-            api_url,
+            ideascale_url,
             stages,
             fund,
             challenges,
@@ -156,10 +155,10 @@ def import_fund(
     print(f"[green bold]All data saved in {output_dir}.[/green bold]")
 
 
-def get_themes(api_url,fund_campaign_id, api_token):
+def get_themes(ideascale_url,fund_campaign_id, api_token):
     print("[yellow]Requesting themes...[/yellow]")
     themes = None
-    url = f"{api_url}/v1/customFields/idea/campaigns/{fund_campaign_id}"
+    url = f"{ideascale_url}/a/rest/v1/customFields/idea/campaigns/{fund_campaign_id}"
     response = ideascale_get(url, api_token)
     if response is not None:
         theme_data = [d for d in response if d.get("key") == THEME_CUSTOM_KEY]
@@ -178,9 +177,9 @@ def get_fund(fund_id, threshold, goal):
     return [{"id": fund_id, "goal": goal, "threshold": threshold, "rewards_info": ""}]
 
 
-def get_challenges(api_url, fund_id, fund_group_id, api_token):
+def get_challenges(ideascale_url, fund_id, fund_group_id, api_token):
     print("[yellow]Requesting challenges...[/yellow]")
-    url = f"{api_url}/v1/campaigns/groups/{fund_group_id}"
+    url = f"{ideascale_url}/a/rest/v1/campaigns/groups/{fund_group_id}"
     response = ideascale_get(url, api_token)
     if response is not None:
         challenges = []
@@ -190,7 +189,7 @@ def get_challenges(api_url, fund_id, fund_group_id, api_token):
                     title = res["name"].replace(f"F{fund_id}:", "").strip()
                     challenge_type = extract_challenge_type(title)
                     rewards, currency = parse_rewards(res["tagline"])
-                    c_url = f"https://cardano.ideascale.com/c/campaigns/{res['id']}/"
+                    c_url = f"{ideascale_url}/c/campaigns/{res['id']}/"
                     challenge = {
                         "id": idx + 1,
                         "title": title,
@@ -213,7 +212,7 @@ def get_challenges(api_url, fund_id, fund_group_id, api_token):
 
 
 def _get_proposals(
-    api_url,
+    ideascale_url,
     stage_ids,
     fund_id,
     challenges,
@@ -233,7 +232,7 @@ def _get_proposals(
     for challenge in challenges:
         c_id = challenge["internal_id"]
         for stage in stage_ids:
-            url_prefix = f"{api_url}/v1/campaigns/{c_id}/ideas/status/custom"
+            url_prefix = f"{ideascale_url}/a/rest/v1/campaigns/{c_id}/ideas/status/custom"
             for page in range(MAX_PAGES_TO_QUERY):
                 url = f"{url_prefix}/{stage}/{page}/{page_size}"
                 response = ideascale_get(url, api_token)
@@ -265,7 +264,7 @@ def _get_proposals(
 
 
 def get_proposals(
-    api_url,
+    ideascale_url,
     stage_ids,
     fund_id,
     challenges,
@@ -284,7 +283,7 @@ def get_proposals(
     internal_id = 0
     for stage in stage_ids:
         for page in range(MAX_PAGES_TO_QUERY):
-            url = f"{api_url}/v1/stages/{stage}/ideas/{page}/{page_size}"
+            url = f"{ideascale_url}/a/rest/v1/stages/{stage}/ideas/{page}/{page_size}"
             response = ideascale_get(url, api_token)
             if response is not None:
                 for idea in response:
@@ -342,10 +341,10 @@ def parse_idea(
         "proposal_title": strip_tags(idea["title"]),
         "proposal_url": idea["url"],
         "files_url": {
-            "open_source": idea["customFieldsByKey"]["f10_open_source_choice"],
-            "external_link1": idea["customFieldsByKey"]["f10_external_link"],
-            "external_link2": idea["customFieldsByKey"]["f10_external_link_2"],
-            "external_link3": idea["customFieldsByKey"]["f10_external_link_3"],
+            "open_source": idea["customFieldsByKey"]["f11_open_source_choice"],
+            "external_link1": idea["customFieldsByKey"]["f11_link_1"],
+            "external_link2": idea["customFieldsByKey"]["f11_link_2"],
+            "external_link3": idea["customFieldsByKey"]["f11_link_3"],
             "themes": idea["customFieldsByKey"][THEME_CUSTOM_KEY],
         },
     }
@@ -537,6 +536,7 @@ def find_challenge(id, challenges):
         if id == c["internal_id"]:
             return c
     print(f"Error, challenge {id} not found")
+    print(f"Error, challenges {challenges} not found")
     return {}
 
 

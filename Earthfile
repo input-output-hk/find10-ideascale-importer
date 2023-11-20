@@ -41,16 +41,16 @@ run:
     FROM +build
     # These args can be passed as earthly CLI arguments.
     ARG api_token
-    ARG api_url="https://temp-cardano-sandbox.ideascale.com/a/rest"
+    ARG ideascale_url="https://temp-cardano-sandbox.ideascale.com"
     ARG fund="11"
     ARG fund_campaign_id="395"
     ARG fund_group_id="91"
     ARG output_dir="./data"
-    ARG stages="--stages 4562 --stages 4573"
+    ARG stages="--stages 4747 --stages 4748 --stages 4749 --stages 4750 --stages 4751 --stages 4753 --stages 4754 --stages 4755 --stages 4756 --stages 4757 --stages 4759 --stages 4760 --stages 4761 --stages 4762 --stages 4763 --stages 4765 --stages 4766 --stages 4767 --stages 4768 --stages 4769 --stages 4771 --stages 4772 --stages 4773 --stages 4774 --stages 4775 --stages 4777 --stages 4778 --stages 4779 --stages 4780 --stages 4781 --stages 4783 --stages 4784 --stages 4785 --stages 4786 --stages 4787"
 
     # Reset the $output_dir
     RUN rm -rf $output_dir && mkdir -p $output_dir
 
     # Run the script
-    RUN --no-cache --secret api_token python3 main.py --fund $fund --fund-campaign-id $fund_campaign_id --fund-group-id $fund_group_id $stages --output-dir $output_dir --api-token $api_token
+    RUN --no-cache --secret api_token python3 main.py --fund $fund --ideascale-url "https://temp-cardano-sandbox.ideascale.com" --fund-campaign-id $fund_campaign_id --fund-group-id $fund_group_id $stages --output-dir $output_dir --api-token $api_token
     SAVE ARTIFACT $output_dir data
