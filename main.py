@@ -507,10 +507,10 @@ def parse_rewards(subtitle):
     # 12,800,000 ada
     rewards = ""
     currency = ""
-    result = re.search(r"\$?(.*?)\s+(?:in\s)?(.*)", subtitle)
+    result = re.search(r"(\₳?)(.*)", subtitle)
     if result is not None:
-        rewards = re.sub("\D", "", result.group(1))
-        currency = result.group(2)
+        rewards = re.sub("\D", "", result.group(2))
+        currency = result.group(1)
     return rewards, currency
 
 
