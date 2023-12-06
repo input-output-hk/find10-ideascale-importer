@@ -1,14 +1,14 @@
 # Set the Earthly version to 0.7
 VERSION 0.7
 
+# Use current debian stable with python
+FROM python:3.11-slim
+
+# Environment variables for python
+ENV PYTHONUNBUFFERED=true
+
 # Build base container and install python requirements
 build-reqs:
-    # Use current debian stable with python
-    FROM python:3.11-slim
-
-    # Environment variables for python
-    ENV PYTHONUNBUFFERED=true
-
     WORKDIR /ideascale-importer
 
     # Install system dependencies
@@ -27,7 +27,7 @@ build-reqs:
 build:
     FROM +build-reqs
     # Copy the package files to the container
-    COPY --dir scripts examples templates take_snapshot scripts pyproject.toml poetry.lock README.md ./
+    COPY --dir scripts examples templates main.py README.md ./
 
     SAVE ARTIFACT /ideascale-importer
 
@@ -52,5 +52,5 @@ run:
     RUN rm -rf $output_dir && mkdir -p $output_dir
 
     # Run the script
-    RUN --no-cache --secret api_token python3 take_snapshot/main.py --fund $fund --ideascale-url "https://temp-cardano-sandbox.ideascale.com" --fund-campaign-id $fund_campaign_id --fund-group-id $fund_group_id $stages --output-dir $output_dir --api-token $api_token
+    RUN --no-cache --secret api_token python3 main.py --fund $fund --ideascale-url "https://temp-cardano-sandbox.ideascale.com" --fund-campaign-id $fund_campaign_id --fund-group-id $fund_group_id $stages --output-dir $output_dir --api-token $api_token
     SAVE ARTIFACT $output_dir data
