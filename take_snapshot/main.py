@@ -1,3 +1,4 @@
+"""Script for taking snapshots of IdeaScale API data and generating artifacts for deployment."""
 from typing import List
 import typer
 import json
