@@ -4,7 +4,7 @@ import typer
 import json
 import requests
 from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.retry import Retry
+from urllib3.util.retry import Retry
 from markdownify import markdownify as md
 import re
 import pandas as pd
