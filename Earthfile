@@ -1,14 +1,14 @@
 # Set the Earthly version to 0.7
 VERSION 0.7
 
-# Use current debian stable with python
-FROM python:3.11-slim
-
-# Environment variables for python
-ENV PYTHONUNBUFFERED=true
-
 # Build base container and install python requirements
 build-reqs:
+    # Use current debian stable with python
+    FROM python:3.11-slim
+
+    # Environment variables for python
+    ENV PYTHONUNBUFFERED=true
+
     WORKDIR /ideascale-importer
 
     # Install system dependencies
