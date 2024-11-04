@@ -35,7 +35,6 @@ with open("random-reviews.csv", mode="w") as file:
             "proposal_url",
             "proposal_title",
             "proposal_challenge_id",
-            "Result",
         ]
     )
     index = 0
