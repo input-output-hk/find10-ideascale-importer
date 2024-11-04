@@ -435,13 +435,8 @@ def save_json(path, data):
 
 def extract_proposers(idea, authors_output):
     contributors = []
-    proposers = []
     if authors_output == "std" or authors_output == "merged_str":
-        try:
-            proposers = [idea["authorInfo"]["name"]]
-        except KeyError:
-            print(idea)
-            exit
+        proposers = [idea["authorInfo"]["name"]]
         if authors_output == "merged_str":
             contributors = [c["name"] for c in idea["contributors"]]
         all_authors = proposers + contributors
