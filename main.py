@@ -15,7 +15,7 @@ app = typer.Typer()
 
 IDEASCALE_URL = "https://cardano.ideascale.com"
 MAX_PAGES_TO_QUERY = 100
-THEME_CUSTOM_KEY = "f11_themes"
+THEME_CUSTOM_KEY = "f12_themes"
 
 def options_validation(ctx: typer.Context, value: bool):
     """
@@ -92,14 +92,14 @@ def import_fund(
     proposals_format = json.load(open(f"{proposals_format}"))
     reviews_format = json.load(open(f"{reviews_format}"))
     if assessments:
-        assessments = transform_assessments(pd.read_csv(assessments), reviews_format)
+        assessments = transform_assessments(pd.read_csv(assessments, engine="python"), reviews_format)
     else:
         assessments = False
 
     scores = get_scores(assessments)
     reviews = get_reviews(assessments, reviews_format)
     if withdrawn != "":
-        withdrawn = pd.read_csv(withdrawn)
+        withdrawn = pd.read_csv(withdrawn, engine="python")
     else:
         withdrawn = False
     # Get local and remote data
@@ -336,15 +336,15 @@ def parse_idea(
         "chain_vote_type": chain_vote_type,
         "internal_id": internal_id,
         "proposal_id": idea["id"],
-        "proposal_impact_score": extract_score(idea["id"], assessments),
+        "proposal_impact_score": 0, #extract_score(idea["id"], assessments), [this field is not used anymore]
         "proposal_summary": strip_tags(idea["text"]),
         "proposal_title": strip_tags(idea["title"]),
         "proposal_url": idea["url"],
         "files_url": {
-            "open_source": idea["customFieldsByKey"]["f11_open_source_choice"],
-            "external_link1": idea["customFieldsByKey"]["f11_link_1"],
-            "external_link2": idea["customFieldsByKey"]["f11_link_2"],
-            "external_link3": idea["customFieldsByKey"]["f11_link_3"],
+            "open_source": idea["customFieldsByKey"]["f12_open_source_choice"],
+            "external_link1": idea["customFieldsByKey"]["f12_link_1"],
+            "external_link2": idea["customFieldsByKey"]["f12_link_2"],
+            "external_link3": idea["customFieldsByKey"]["f12_link_3"],
             "themes": idea["customFieldsByKey"][THEME_CUSTOM_KEY],
         },
     }
@@ -435,8 +435,13 @@ def save_json(path, data):
 
 def extract_proposers(idea, authors_output):
     contributors = []
+    proposers = []
     if authors_output == "std" or authors_output == "merged_str":
-        proposers = [idea["authorInfo"]["name"]]
+        try:
+            proposers = [idea["authorInfo"]["name"]]
+        except KeyError:
+            print(idea)
+            exit
         if authors_output == "merged_str":
             contributors = [c["name"] for c in idea["contributors"]]
         all_authors = proposers + contributors
