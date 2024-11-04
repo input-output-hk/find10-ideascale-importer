@@ -8,8 +8,7 @@
     "Feasibility Note": "feasibility_note",
     "Feasibility Rating": "feasibility_rating_given",
     "Auditability Note": "auditability_note",
-    "Auditability Rating": "auditability_rating_given",
-    "Result": "ranking"
+    "Auditability Rating": "auditability_rating_given"
   },
   "export_cols": {
     "id": "string",
