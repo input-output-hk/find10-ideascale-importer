@@ -38,7 +38,9 @@ build:
 # The simplest way to accomplish this, is to put it in a `./secret` file, so that Earthly can retrieve it.
 # It also needs to be provided by CI to work there.
 # Example command:
-#  earthly -P +run --fund 12 --fund_group_id 95 --fund_campaign_id 415 --stages "--stages 4793 --stages 4799 --stages 4805 --stages 4811 --stages 4817" --ideascale_url "https://cardano.ideascale.com"
+#  earthly -P +run --fund 12 --fund_group_id 95 --fund_campaign_id 415 --stages "--stages 4793 --stages 4799 --stages 4805 --stages 4811 --sta#  earthly -P +run --fund 12 --fund_group_id 95 --fund_campaign_id 415 --stages "--stages 4793 --stages 4799 --stages 4805 --stages 4811 --stag>ges 4817" --ideascale_url "https://cardano.ideascale.com"
+# To get also the reviews add the --assesments parameter poiting to the reviews file
+#  earthly -P +run --fund 12 --fund_group_id 95 --fund_campaign_id 415 --stages "--stages 4793 --stages 4799 --stages 4805 --stages 4811 --sta#  earthly -P +run --fund 12 --fund_group_id 95 --fund_campaign_id 415 --stages "--stages 4793 --stages 4799 --stages 4805 --stages 4811 --stag>ges 4817" --ideascale_url "https://cardano.ideascale.com" --assesments "reviews.csv"
 run:
     FROM +build
     # These args can be passed as earthly CLI arguments.
