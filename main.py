@@ -15,7 +15,7 @@ app = typer.Typer()
 
 IDEASCALE_URL = "https://cardano.ideascale.com"
 MAX_PAGES_TO_QUERY = 100
-THEME_CUSTOM_KEY = "f12_themes"
+THEME_CUSTOM_KEY = "f13_themes"
 PAGE_SIZE = 25
 
 def options_validation(ctx: typer.Context, value: bool):
@@ -340,10 +340,10 @@ def parse_idea(
         "proposal_title": strip_tags(idea["title"]),
         "proposal_url": idea["url"],
         "files_url": {
-            "open_source": idea["customFieldsByKey"]["f12_open_source_choice"],
-            "external_link1": idea["customFieldsByKey"]["f12_link_1"],
-            "external_link2": idea["customFieldsByKey"]["f12_link_2"],
-            "external_link3": idea["customFieldsByKey"]["f12_link_3"],
+            "open_source": idea["customFieldsByKey"]["f13_open_source_choice"],
+            "external_link1": idea["customFieldsByKey"]["f13_link_1"],
+            "external_link2": idea["customFieldsByKey"]["f13_link_2"],
+            "external_link3": idea["customFieldsByKey"]["f13_link_3"],
             "themes": idea["customFieldsByKey"][THEME_CUSTOM_KEY],
         },
     }
