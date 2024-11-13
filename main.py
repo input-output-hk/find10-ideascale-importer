@@ -16,6 +16,7 @@ app = typer.Typer()
 IDEASCALE_URL = "https://cardano.ideascale.com"
 MAX_PAGES_TO_QUERY = 100
 THEME_CUSTOM_KEY = "f12_themes"
+PAGE_SIZE = 25
 
 def options_validation(ctx: typer.Context, value: bool):
     """
@@ -224,7 +225,6 @@ def _get_proposals(
     authors_output,
 ):
     print("[yellow]Requesting proposals...[/yellow]")
-    page_size = 50
     ideas = []
     relevant_keys = extract_relevant_keys(proposal_mappings)
     relevant_extra_keys = extract_relevant_keys(extra_fields_map)
@@ -234,7 +234,7 @@ def _get_proposals(
         for stage in stage_ids:
             url_prefix = f"{ideascale_url}/a/rest/v1/campaigns/{c_id}/ideas/status/custom"
             for page in range(MAX_PAGES_TO_QUERY):
-                url = f"{url_prefix}/{stage}/{page}/{page_size}"
+                url = f"{url_prefix}/{stage}/{page}/{PAGE_SIZE}"
                 response = ideascale_get(url, api_token)
                 if response is not None:
                     for idea in response:
@@ -253,7 +253,7 @@ def _get_proposals(
                         )
                         ideas.append(parsed_idea)
                         internal_id = internal_id + 1
-                    if len(response) < page_size:
+                    if len(response) < PAGE_SIZE:
                         # Break page loop if there are no results - thanks IdeaScale
                         # pagination implementation
                         break
@@ -276,14 +276,13 @@ def get_proposals(
     authors_output,
 ):
     print("[yellow]Requesting proposals...[/yellow]")
-    page_size = 50
     ideas = []
     relevant_keys = extract_relevant_keys(proposal_mappings)
     relevant_extra_keys = extract_relevant_keys(extra_fields_map)
     internal_id = 0
     for stage in stage_ids:
         for page in range(MAX_PAGES_TO_QUERY):
-            url = f"{ideascale_url}/a/rest/v1/stages/{stage}/ideas/{page}/{page_size}"
+            url = f"{ideascale_url}/a/rest/v1/stages/{stage}/ideas/{page}/{PAGE_SIZE}"
             response = ideascale_get(url, api_token)
             if response is not None:
                 for idea in response:
@@ -303,7 +302,7 @@ def get_proposals(
                     )
                     ideas.append(parsed_idea)
                     internal_id = internal_id + 1
-                if len(response) < page_size:
+                if len(response) < PAGE_SIZE:
                     # Break page loop if there are no results - thanks IdeaScale
                     # pagination implementation
                     break
