@@ -162,9 +162,14 @@ def get_themes(ideascale_url,fund_campaign_id, api_token):
     url = f"{ideascale_url}/a/rest/v1/customFields/idea/campaigns/{fund_campaign_id}"
     response = ideascale_get(url, api_token)
     if response is not None:
+        print(response)
         theme_data = [d for d in response if d.get("key") == THEME_CUSTOM_KEY]
         if len(theme_data) > 0:
-            themes = theme_data[0]["options"].split("\r\n")
+            themes_list = theme_data[0]["options"].split("\r\n")
+            # remove top list items
+            themes = list(filter(lambda t : not t.startswith('<<<'), themes_list))
+            # remove first empty tag
+            del themes[0]
             print(f"[bold yellow]Obtained themes: {themes}[/bold yellow]")
         else:
             print("[bold red]No theme data available[/bold red]")
@@ -187,7 +192,7 @@ def get_challenges(ideascale_url, fund_id, fund_group_id, api_token):
         if response is not None:
             for fund in response:
                 if "campaigns" in fund:
-                    for res in enumerate(fund["campaigns"]):
+                    for idx, res in enumerate(fund["campaigns"]):
                         title = res["name"].replace(f"F{fund_id}:", "").strip()
                         challenge_type = extract_challenge_type(title)
                         rewards, currency = parse_rewards(res["tagline"])
