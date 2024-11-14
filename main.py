@@ -40,7 +40,7 @@ def import_fund(
     fund_group_id: int = typer.Option(1, help="Ideascale Campaigns group (fund) id"),
     fund_campaign_id: int = typer.Option(1, help="Ideascale Campaign (challenges) id"),
     chain_vote_type: str = typer.Option("private", help="Chain vote type"),
-    threshold: int = typer.Option(450, help="Voting threshold"),
+    threshold: int = typer.Option(25, help="Voting threshold"),
     merge_multiple_authors: bool = typer.Option(
         False, help="When active includes and merge contributors name in author field"
     ),
