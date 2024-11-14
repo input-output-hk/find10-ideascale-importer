@@ -60,12 +60,12 @@ run:
     IF [ "$assessments" = "false" ]
         RUN --no-cache --secret api_token python3 main.py --fund $fund \
             --ideascale-url $ideascale_url --fund-campaign-id $fund_campaign_id \
-            --fund-group-id $fund_group_id $stages --output-dir $output_dir \
+            $fund_group_id $stages --output-dir $output_dir \
             --api-token $api_token
     ELSE
         RUN --no-cache --secret api_token python3 main.py --fund $fund \
             --ideascale-url $ideascale_url --fund-campaign-id $fund_campaign_id \
-            --fund-group-id $fund_group_id $stages --output-dir $output_dir \
+            $fund_group_id $stages --output-dir $output_dir \
             --api-token $api_token --assessments $assessments
     END
     SAVE ARTIFACT $output_dir data AS LOCAL data

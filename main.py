@@ -37,7 +37,7 @@ def import_fund(
     ideascale_url: str = typer.Option(IDEASCALE_URL, help="Base URL for Ideascale API. e.g. "),
     api_token: str = typer.Option("", help="Ideascale API token."),
     fund: int = typer.Option(8, help="Fund number."),
-    fund_group_id: int = typer.Option(1, help="Ideascale Campaigns group (fund) id"),
+    fund_group_id: List[int] = typer.Option([], help="Ideascale Campaigns group (fund) id"),
     fund_campaign_id: int = typer.Option(1, help="Ideascale Campaign (challenges) id"),
     chain_vote_type: str = typer.Option("private", help="Chain vote type"),
     threshold: int = typer.Option(25, help="Voting threshold"),
@@ -180,36 +180,37 @@ def get_fund(fund_id, threshold, goal):
 
 def get_challenges(ideascale_url, fund_id, fund_group_id, api_token):
     print("[yellow]Requesting challenges...[/yellow]")
-    url = f"{ideascale_url}/a/rest/v1/campaigns/groups/{fund_group_id}"
-    response = ideascale_get(url, api_token)
-    if response is not None:
-        challenges = []
-        for fund in response:
-            if "campaigns" in fund:
-                for idx, res in enumerate(fund["campaigns"]):
-                    title = res["name"].replace(f"F{fund_id}:", "").strip()
-                    challenge_type = extract_challenge_type(title)
-                    rewards, currency = parse_rewards(res["tagline"])
-                    c_url = f"{ideascale_url}/c/campaigns/{res['id']}/"
-                    challenge = {
-                        "id": idx + 1,
-                        "title": title,
-                        "challenge_type": challenge_type,
-                        # canonical URL from the API query points to challenge brief
-                        # instead of proposals list
-                        "challenge_url": c_url,
-                        "description": strip_tags(res["description"]),
-                        "fund_id": fund_id,
-                        "rewards_total": rewards,
-                        "proposers_rewards": rewards,
-                        "internal_id": res["id"],
-                    }
-                    challenges.append(challenge)
-        print(f"[bold green]Total challenges pulled: {len(challenges)}[/bold green]")
-        return challenges
-    else:
-        print("[bold red]Unable to pull challenges[/bold red]")
-        return None
+    challenges = []
+    for fund_group in fund_group_id:
+        url = f"{ideascale_url}/a/rest/v1/campaigns/groups/{fund_group}"
+        response = ideascale_get(url, api_token)
+        if response is not None:
+            for fund in response:
+                if "campaigns" in fund:
+                    for res in enumerate(fund["campaigns"]):
+                        title = res["name"].replace(f"F{fund_id}:", "").strip()
+                        challenge_type = extract_challenge_type(title)
+                        rewards, currency = parse_rewards(res["tagline"])
+                        c_url = f"{ideascale_url}/c/campaigns/{res['id']}/"
+                        challenge = {
+                            "id": len(challenges) + 1,
+                            "title": title,
+                            "challenge_type": challenge_type,
+                            # canonical URL from the API query points to challenge brief
+                            # instead of proposals list
+                            "challenge_url": c_url,
+                            "description": strip_tags(res["description"]),
+                            "fund_id": fund_id,
+                            "rewards_total": rewards,
+                            "proposers_rewards": rewards,
+                            "internal_id": res["id"],
+                        }
+                        challenges.append(challenge)
+        else:
+            print("[bold red]Unable to pull challenges[/bold red]")
+            return None
+    print(f"[bold green]Total challenges pulled: {len(challenges)}[/bold green]")
+    return challenges
 
 
 def _get_proposals(
