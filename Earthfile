@@ -41,6 +41,7 @@ build:
 #  earthly -P +run --fund 12 --fund_group_id 95 --fund_campaign_id 415 --stages "--stages 4793 --stages 4799 --stages 4805 --stages 4811 --sta#  earthly -P +run --fund 12 --fund_group_id 95 --fund_campaign_id 415 --stages "--stages 4793 --stages 4799 --stages 4805 --stages 4811 --stages 4817" --ideascale_url "https://cardano.ideascale.com"
 # To get also the reviews add the --assesments parameter poiting to the reviews file
 # earthly -P +run --fund 13 --fund_campaign_id 422 --fund_group_id "--fund-group-id 97 --fund-group-id 98" --stages "--stages 4845 --stages 4846 --stages 4851 --stages 4852 --stages 4857 --stages 4858 --stages 4863 --stages 4864 --stages 4867 --stages 4871" --ideascale_url "https://cardano.ideascale.com"
+run:
     FROM +build
     # These args can be passed as earthly CLI arguments.
     ARG api_token
