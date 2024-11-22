@@ -37,20 +37,35 @@ build:
 #
 # The simplest way to accomplish this, is to put it in a `./secret` file, so that Earthly can retrieve it.
 # It also needs to be provided by CI to work there.
+# Example command:
+#  earthly -P +run --fund 12 --fund_group_id 95 --fund_campaign_id 415 --stages "--stages 4793 --stages 4799 --stages 4805 --stages 4811 --sta#  earthly -P +run --fund 12 --fund_group_id 95 --fund_campaign_id 415 --stages "--stages 4793 --stages 4799 --stages 4805 --stages 4811 --stages 4817" --ideascale_url "https://cardano.ideascale.com"
+# To get also the reviews add the --assesments parameter poiting to the reviews file
+# earthly -P +run --fund 13 --fund_campaign_id 422 --fund_group_id "--fund-group-id 97 --fund-group-id 98" --stages "--stages 4845 --stages 4846 --stages 4851 --stages 4852 --stages 4857 --stages 4858 --stages 4863 --stages 4864 --stages 4867 --stages 4871" --ideascale_url "https://cardano.ideascale.com"
 run:
     FROM +build
     # These args can be passed as earthly CLI arguments.
     ARG api_token
-    ARG ideascale_url="https://temp-cardano-sandbox.ideascale.com"
-    ARG fund="11"
-    ARG fund_campaign_id="395"
-    ARG fund_group_id="91"
+    ARG fund
+    ARG fund_campaign_id
+    ARG fund_group_id
+    ARG stages
     ARG output_dir="./data"
-    ARG stages="--stages 4747 --stages 4748 --stages 4749 --stages 4750 --stages 4751 --stages 4753 --stages 4754 --stages 4755 --stages 4756 --stages 4757 --stages 4759 --stages 4760 --stages 4761 --stages 4762 --stages 4763 --stages 4765 --stages 4766 --stages 4767 --stages 4768 --stages 4769 --stages 4771 --stages 4772 --stages 4773 --stages 4774 --stages 4775 --stages 4777 --stages 4778 --stages 4779 --stages 4780 --stages 4781 --stages 4783 --stages 4784 --stages 4785 --stages 4786 --stages 4787"
+    ARG ideascale_url="https://temp-cardano-sandbox.ideascale.com"
+    ARG assessments= false
 
     # Reset the $output_dir
     RUN rm -rf $output_dir && mkdir -p $output_dir
 
     # Run the script
-    RUN --no-cache --secret api_token python3 main.py --fund $fund --ideascale-url "https://temp-cardano-sandbox.ideascale.com" --fund-campaign-id $fund_campaign_id --fund-group-id $fund_group_id $stages --output-dir $output_dir --api-token $api_token
-    SAVE ARTIFACT $output_dir data
+    IF [ "$assessments" = "false" ]
+        RUN --no-cache --secret api_token python3 main.py --fund $fund \
+            --ideascale-url $ideascale_url --fund-campaign-id $fund_campaign_id \
+            $fund_group_id $stages --output-dir $output_dir \
+            --api-token $api_token
+    ELSE
+        RUN --no-cache --secret api_token python3 main.py --fund $fund \
+            --ideascale-url $ideascale_url --fund-campaign-id $fund_campaign_id \
+            $fund_group_id $stages --output-dir $output_dir \
+            --api-token $api_token --assessments $assessments
+    END
+    SAVE ARTIFACT $output_dir data AS LOCAL data

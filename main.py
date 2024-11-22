@@ -15,7 +15,8 @@ app = typer.Typer()
 
 IDEASCALE_URL = "https://cardano.ideascale.com"
 MAX_PAGES_TO_QUERY = 100
-THEME_CUSTOM_KEY = "f11_themes"
+THEME_CUSTOM_KEY = "f13_themes"
+PAGE_SIZE = 25
 
 def options_validation(ctx: typer.Context, value: bool):
     """
@@ -36,10 +37,10 @@ def import_fund(
     ideascale_url: str = typer.Option(IDEASCALE_URL, help="Base URL for Ideascale API. e.g. "),
     api_token: str = typer.Option("", help="Ideascale API token."),
     fund: int = typer.Option(8, help="Fund number."),
-    fund_group_id: int = typer.Option(1, help="Ideascale Campaigns group (fund) id"),
+    fund_group_id: List[int] = typer.Option([], help="Ideascale Campaigns group (fund) id"),
     fund_campaign_id: int = typer.Option(1, help="Ideascale Campaign (challenges) id"),
     chain_vote_type: str = typer.Option("private", help="Chain vote type"),
-    threshold: int = typer.Option(450, help="Voting threshold"),
+    threshold: int = typer.Option(25, help="Voting threshold"),
     merge_multiple_authors: bool = typer.Option(
         False, help="When active includes and merge contributors name in author field"
     ),
@@ -92,14 +93,14 @@ def import_fund(
     proposals_format = json.load(open(f"{proposals_format}"))
     reviews_format = json.load(open(f"{reviews_format}"))
     if assessments:
-        assessments = transform_assessments(pd.read_csv(assessments), reviews_format)
+        assessments = transform_assessments(pd.read_csv(assessments, engine="python"), reviews_format)
     else:
         assessments = False
 
     scores = get_scores(assessments)
     reviews = get_reviews(assessments, reviews_format)
     if withdrawn != "":
-        withdrawn = pd.read_csv(withdrawn)
+        withdrawn = pd.read_csv(withdrawn, engine="python")
     else:
         withdrawn = False
     # Get local and remote data
@@ -163,7 +164,11 @@ def get_themes(ideascale_url,fund_campaign_id, api_token):
     if response is not None:
         theme_data = [d for d in response if d.get("key") == THEME_CUSTOM_KEY]
         if len(theme_data) > 0:
-            themes = theme_data[0]["options"].split("\r\n")
+            themes_list = theme_data[0]["options"].split("\r\n")
+            # remove top list items
+            themes = list(filter(lambda t : not t.startswith('<<<'), themes_list))
+            # remove first empty tag
+            del themes[0]
             print(f"[bold yellow]Obtained themes: {themes}[/bold yellow]")
         else:
             print("[bold red]No theme data available[/bold red]")
@@ -179,36 +184,37 @@ def get_fund(fund_id, threshold, goal):
 
 def get_challenges(ideascale_url, fund_id, fund_group_id, api_token):
     print("[yellow]Requesting challenges...[/yellow]")
-    url = f"{ideascale_url}/a/rest/v1/campaigns/groups/{fund_group_id}"
-    response = ideascale_get(url, api_token)
-    if response is not None:
-        challenges = []
-        for fund in response:
-            if "campaigns" in fund:
-                for idx, res in enumerate(fund["campaigns"]):
-                    title = res["name"].replace(f"F{fund_id}:", "").strip()
-                    challenge_type = extract_challenge_type(title)
-                    rewards, currency = parse_rewards(res["tagline"])
-                    c_url = f"{ideascale_url}/c/campaigns/{res['id']}/"
-                    challenge = {
-                        "id": idx + 1,
-                        "title": title,
-                        "challenge_type": challenge_type,
-                        # canonical URL from the API query points to challenge brief
-                        # instead of proposals list
-                        "challenge_url": c_url,
-                        "description": strip_tags(res["description"]),
-                        "fund_id": fund_id,
-                        "rewards_total": rewards,
-                        "proposers_rewards": rewards,
-                        "internal_id": res["id"],
-                    }
-                    challenges.append(challenge)
-        print(f"[bold green]Total challenges pulled: {len(challenges)}[/bold green]")
-        return challenges
-    else:
-        print("[bold red]Unable to pull challenges[/bold red]")
-        return None
+    challenges = []
+    for fund_group in fund_group_id:
+        url = f"{ideascale_url}/a/rest/v1/campaigns/groups/{fund_group}"
+        response = ideascale_get(url, api_token)
+        if response is not None:
+            for fund in response:
+                if "campaigns" in fund:
+                    for idx, res in enumerate(fund["campaigns"]):
+                        title = res["name"].replace(f"F{fund_id}:", "").strip()
+                        challenge_type = extract_challenge_type(title)
+                        rewards, currency = parse_rewards(res["tagline"])
+                        c_url = f"{ideascale_url}/c/campaigns/{res['id']}/"
+                        challenge = {
+                            "id": len(challenges) + 1,
+                            "title": title,
+                            "challenge_type": challenge_type,
+                            # canonical URL from the API query points to challenge brief
+                            # instead of proposals list
+                            "challenge_url": c_url,
+                            "description": strip_tags(res["description"]),
+                            "fund_id": fund_id,
+                            "rewards_total": rewards,
+                            "proposers_rewards": rewards,
+                            "internal_id": res["id"],
+                        }
+                        challenges.append(challenge)
+        else:
+            print("[bold red]Unable to pull challenges[/bold red]")
+            return None
+    print(f"[bold green]Total challenges pulled: {len(challenges)}[/bold green]")
+    return challenges
 
 
 def _get_proposals(
@@ -224,7 +230,6 @@ def _get_proposals(
     authors_output,
 ):
     print("[yellow]Requesting proposals...[/yellow]")
-    page_size = 50
     ideas = []
     relevant_keys = extract_relevant_keys(proposal_mappings)
     relevant_extra_keys = extract_relevant_keys(extra_fields_map)
@@ -234,7 +239,7 @@ def _get_proposals(
         for stage in stage_ids:
             url_prefix = f"{ideascale_url}/a/rest/v1/campaigns/{c_id}/ideas/status/custom"
             for page in range(MAX_PAGES_TO_QUERY):
-                url = f"{url_prefix}/{stage}/{page}/{page_size}"
+                url = f"{url_prefix}/{stage}/{page}/{PAGE_SIZE}"
                 response = ideascale_get(url, api_token)
                 if response is not None:
                     for idea in response:
@@ -253,7 +258,7 @@ def _get_proposals(
                         )
                         ideas.append(parsed_idea)
                         internal_id = internal_id + 1
-                    if len(response) < page_size:
+                    if len(response) < PAGE_SIZE:
                         # Break page loop if there are no results - thanks IdeaScale
                         # pagination implementation
                         break
@@ -276,14 +281,13 @@ def get_proposals(
     authors_output,
 ):
     print("[yellow]Requesting proposals...[/yellow]")
-    page_size = 50
     ideas = []
     relevant_keys = extract_relevant_keys(proposal_mappings)
     relevant_extra_keys = extract_relevant_keys(extra_fields_map)
     internal_id = 0
     for stage in stage_ids:
         for page in range(MAX_PAGES_TO_QUERY):
-            url = f"{ideascale_url}/a/rest/v1/stages/{stage}/ideas/{page}/{page_size}"
+            url = f"{ideascale_url}/a/rest/v1/stages/{stage}/ideas/{page}/{PAGE_SIZE}"
             response = ideascale_get(url, api_token)
             if response is not None:
                 for idea in response:
@@ -303,7 +307,7 @@ def get_proposals(
                     )
                     ideas.append(parsed_idea)
                     internal_id = internal_id + 1
-                if len(response) < page_size:
+                if len(response) < PAGE_SIZE:
                     # Break page loop if there are no results - thanks IdeaScale
                     # pagination implementation
                     break
@@ -336,15 +340,15 @@ def parse_idea(
         "chain_vote_type": chain_vote_type,
         "internal_id": internal_id,
         "proposal_id": idea["id"],
-        "proposal_impact_score": extract_score(idea["id"], assessments),
+        "proposal_impact_score": 0, #extract_score(idea["id"], assessments), [this field is not used anymore]
         "proposal_summary": strip_tags(idea["text"]),
         "proposal_title": strip_tags(idea["title"]),
         "proposal_url": idea["url"],
         "files_url": {
-            "open_source": idea["customFieldsByKey"]["f11_open_source_choice"],
-            "external_link1": idea["customFieldsByKey"]["f11_link_1"],
-            "external_link2": idea["customFieldsByKey"]["f11_link_2"],
-            "external_link3": idea["customFieldsByKey"]["f11_link_3"],
+            "open_source": idea["customFieldsByKey"]["f13_open_source_choice"],
+            "external_link1": idea["customFieldsByKey"]["f13_link_1"],
+            "external_link2": idea["customFieldsByKey"]["f13_link_2"],
+            "external_link3": idea["customFieldsByKey"]["f13_link_3"],
             "themes": idea["customFieldsByKey"][THEME_CUSTOM_KEY],
         },
     }
